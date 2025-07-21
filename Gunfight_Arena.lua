@@ -34,9 +34,9 @@ local function createButton(name, color, position)
 end
 
 -- Tạo nút
-local aimButton = createButton("AimButton", Color3.fromRGB(255, 0, 0), UDim2.new(0, 20, 1, -80))
-local excludeButton = createButton("ExcludeButton", Color3.fromRGB(0, 255, 0), UDim2.new(0, 90, 1, -80))
-local clearButton = createButton("ClearButton", Color3.fromRGB(255, 255, 0), UDim2.new(0, 160, 1, -80))
+local aimButton = createButton("AimButton", Color3.fromRGB(255, 0, 0), UDim2.new(0.8, 0, 0.7, -80))
+local excludeButton = createButton("ExcludeButton", Color3.fromRGB(0, 255, 0), UDim2.new(0.8, 0, 0.5, -80))
+local clearButton = createButton("ClearButton", Color3.fromRGB(255, 255, 0), UDim2.new(0.8, 0, 0.3, -80))
 
 -- ESP
 local function createESP(target, color)
