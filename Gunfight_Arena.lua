@@ -23,7 +23,7 @@ task.spawn(function()
 			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
 			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
 		end
-		task.wait(0.1) -- điều chỉnh tốc độ bắn
+		task.wait(0.025) -- điều chỉnh tốc độ bắn
 	end
 end)
 
