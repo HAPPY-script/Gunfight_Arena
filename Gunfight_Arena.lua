@@ -1,3 +1,7 @@
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local autoShotEnabled = false
+local shooting = false
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,6 +16,16 @@ local excluded = {}
 local excludedNames = {}
 local currentTarget = nil
 local aiming = false
+
+task.spawn(function()
+	while true do
+		if autoShotEnabled and aiming and currentTarget then
+			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+		end
+		task.wait(0.1) -- điều chỉnh tốc độ bắn
+	end
+end)
 
 -- Tạo GUI nếu chưa có
 local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
@@ -104,11 +118,9 @@ end
 
 -- Render mỗi frame
 RunService.RenderStepped:Connect(function()
-	-- Aimbot
 	if aiming then
 		local newTarget = getClosestToCenter()
 
-		-- Kiểm tra nếu mục tiêu hiện tại bị chết hoặc bị khuất thì huỷ
 		if currentTarget then
 			local humanoid = currentTarget:FindFirstChildOfClass("Humanoid")
 			local hrp = currentTarget:FindFirstChild("HumanoidRootPart")
@@ -118,7 +130,6 @@ RunService.RenderStepped:Connect(function()
 				excluded[currentTarget] = true
 				currentTarget = nil
 			elseif hrp then
-				-- Raycast kiểm tra khuất tầm nhìn
 				local origin = Camera.CFrame.Position
 				local direction = (hrp.Position - origin).Unit * (hrp.Position - origin).Magnitude
 				local rayParams = RaycastParams.new()
@@ -126,7 +137,6 @@ RunService.RenderStepped:Connect(function()
 				rayParams.FilterDescendantsInstances = {LocalPlayer.Character, currentTarget}
 				local result = workspace:Raycast(origin, direction, rayParams)
 
-				-- Nếu bị vật cản che, ngừng nhắm
 				if result and not currentTarget:IsAncestorOf(result.Instance) then
 					removeESP(currentTarget)
 					currentTarget = nil
@@ -134,24 +144,23 @@ RunService.RenderStepped:Connect(function()
 			end
 		end
 
-		-- Nếu không có mục tiêu hoặc mục tiêu đổi, thì tìm mới
 		if not currentTarget and newTarget then
 			currentTarget = newTarget
-			createESP(currentTarget, Color3.fromRGB(255, 0, 0)) -- Đỏ
+			createESP(currentTarget, Color3.fromRGB(255, 0, 0))
 		end
 
-		-- Nếu mục tiêu hợp lệ, nhắm vào nó
 		if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
 			Camera.CFrame = CFrame.new(
 				Camera.CFrame.Position,
 				currentTarget.HumanoidRootPart.Position + Vector3.new(0, 1.75, 0))
 		end
-	elseif currentTarget then
-		removeESP(currentTarget)
-		currentTarget = nil
+	else
+		if currentTarget then
+			removeESP(currentTarget)
+			currentTarget = nil
+		end
 	end
 
-	-- Tô ESP xanh cho các model bị exclude theo tên
 	for _, model in ipairs(workspace:GetChildren()) do
 		if model:IsA("Model") and excludedNames[model.Name] and not excluded[model] then
 			createESP(model, Color3.fromRGB(0, 255, 0))
@@ -209,6 +218,17 @@ UserInputService.InputBegan:Connect(function(input, gp)
 		excluded = {}
 		excludedNames = {}
 	end
+
+    	if input.KeyCode == Enum.KeyCode.Y then
+    	autoShotEnabled = not autoShotEnabled
+	    shooting = false
+    
+    	game.StarterGui:SetCore("SendNotification", {
+	    	Title = "Auto Shot",
+	    	Text = autoShotEnabled and "Đã BẬT tự động bắn" or "Đã TẮT tự động bắn",
+    		Duration = 2
+    	})
+    end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
