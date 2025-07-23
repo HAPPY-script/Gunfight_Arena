@@ -98,7 +98,7 @@ RunService.RenderStepped:Connect(function()
 		if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
 			Camera.CFrame = CFrame.new(
 	        Camera.CFrame.Position,
-	        currentTarget.HumanoidRootPart.Position + Vector3.new(0, 2, 0))
+	        currentTarget.HumanoidRootPart.Position + Vector3.new(0, 1.75, 0))
 		end
 	elseif currentTarget then
 		removeESP(currentTarget)
