@@ -41,15 +41,17 @@ local clearButton = createButton("ClearButton", Color3.fromRGB(255, 255, 0), UDi
 
 -- ESP
 local function createESP(target, color)
-	local highlight = Instance.new("Highlight")
-	highlight.Name = "ESP_Highlight"
-	highlight.Adornee = target
-	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	highlight.FillTransparency = 0.8
-	highlight.OutlineTransparency = 0
-	highlight.FillColor = color
-	highlight.OutlineColor = color
-	highlight.Parent = target
+	if not target:FindFirstChild("ESP_Highlight") then
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "ESP_Highlight"
+		highlight.Adornee = target
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.FillTransparency = 0.8
+		highlight.OutlineTransparency = 0
+		highlight.FillColor = color
+		highlight.OutlineColor = color
+		highlight.Parent = target
+	end
 end
 
 local function removeESP(target)
@@ -102,12 +104,13 @@ end
 
 -- Render mỗi frame
 RunService.RenderStepped:Connect(function()
+	-- Aimbot
 	if aiming then
 		local newTarget = getClosestToCenter()
 		if newTarget and newTarget ~= currentTarget then
 			if currentTarget then removeESP(currentTarget) end
 			currentTarget = newTarget
-			createESP(currentTarget, Color3.fromRGB(255, 0, 0))
+			createESP(currentTarget, Color3.fromRGB(255, 0, 0)) -- đỏ
 		end
 
 		if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
@@ -119,9 +122,17 @@ RunService.RenderStepped:Connect(function()
 		removeESP(currentTarget)
 		currentTarget = nil
 	end
+
+	-- Tô ESP cho các model bị loại theo tên
+	for _, model in ipairs(workspace:GetChildren()) do
+		if model:IsA("Model") and excludedNames[model.Name] and not excluded[model] then
+			createESP(model, Color3.fromRGB(0, 255, 0)) -- xanh lá
+			excluded[model] = true
+		end
+	end
 end)
 
--- Xử lý các nút GUI
+-- Nút GUI
 aimButton.MouseButton1Down:Connect(function()
 	aiming = true
 end)
@@ -147,7 +158,7 @@ clearButton.MouseButton1Click:Connect(function()
 	excludedNames = {}
 end)
 
--- Bắt phím (PC)
+-- Bắt phím
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
 
