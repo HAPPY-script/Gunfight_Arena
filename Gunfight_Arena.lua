@@ -69,19 +69,32 @@ end
 local function getClosestToCenter()
 	local closest = nil
 	local minDist = math.huge
+
 	for _, model in ipairs(workspace:GetChildren()) do
 		if isValidTarget(model) then
 			local hrp = model:FindFirstChild("HumanoidRootPart")
 			local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
 			if onScreen then
-				local dist = (Vector2.new(pos.X, pos.Y) - Camera.ViewportSize / 2).Magnitude
-				if dist < minDist then
-					minDist = dist
-					closest = model
+				-- Raycast kiểm tra tầm nhìn
+				local direction = (hrp.Position - Camera.CFrame.Position).Unit * (hrp.Position - Camera.CFrame.Position).Magnitude
+				local rayParams = RaycastParams.new()
+				rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+				rayParams.FilterDescendantsInstances = {LocalPlayer.Character, model} -- bỏ qua bản thân và đối tượng
+				rayParams.IgnoreWater = true
+
+				local result = workspace:Raycast(Camera.CFrame.Position, direction, rayParams)
+
+				if not result then -- không có gì cản
+					local dist = (Vector2.new(pos.X, pos.Y) - Camera.ViewportSize / 2).Magnitude
+					if dist < minDist then
+						minDist = dist
+						closest = model
+					end
 				end
 			end
 		end
 	end
+
 	return closest
 end
 
