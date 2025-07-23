@@ -65,7 +65,7 @@ local function isValidTarget(model)
 	return true
 end
 
--- Tìm mục tiêu gần tâm màn hình
+-- Tìm mục tiêu gần tâm màn hình và không bị vật che khuất
 local function getClosestToCenter()
 	local closest = nil
 	local minDist = math.huge
@@ -73,22 +73,23 @@ local function getClosestToCenter()
 	for _, model in ipairs(workspace:GetChildren()) do
 		if isValidTarget(model) then
 			local hrp = model:FindFirstChild("HumanoidRootPart")
-			local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-			if onScreen then
-				-- Raycast kiểm tra tầm nhìn
-				local direction = (hrp.Position - Camera.CFrame.Position).Unit * (hrp.Position - Camera.CFrame.Position).Magnitude
-				local rayParams = RaycastParams.new()
-				rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-				rayParams.FilterDescendantsInstances = {LocalPlayer.Character, model} -- bỏ qua bản thân và đối tượng
-				rayParams.IgnoreWater = true
+			if hrp then
+				local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+				if onScreen then
+					-- Raycast để kiểm tra tầm nhìn
+					local origin = Camera.CFrame.Position
+					local direction = (hrp.Position - origin).Unit * (hrp.Position - origin).Magnitude
+					local rayParams = RaycastParams.new()
+					rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+					rayParams.FilterDescendantsInstances = {LocalPlayer.Character, model} -- không bị chặn bởi nhân vật mình và target
+					local result = workspace:Raycast(origin, direction, rayParams)
 
-				local result = workspace:Raycast(Camera.CFrame.Position, direction, rayParams)
-
-				if not result then -- không có gì cản
-					local dist = (Vector2.new(pos.X, pos.Y) - Camera.ViewportSize / 2).Magnitude
-					if dist < minDist then
-						minDist = dist
-						closest = model
+					if not result or (result.Instance and model:IsAncestorOf(result.Instance)) then
+						local dist = (Vector2.new(screenPos.X, screenPos.Y) - Camera.ViewportSize / 2).Magnitude
+						if dist < minDist then
+							minDist = dist
+							closest = model
+						end
 					end
 				end
 			end
