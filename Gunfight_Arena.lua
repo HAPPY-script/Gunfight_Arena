@@ -9,6 +9,7 @@ local EXCLUDE_KEY = Enum.KeyCode.Q
 local CLEAR_EXCLUDES_KEY = Enum.KeyCode.T
 
 local excluded = {}
+local excludedNames = {}
 local currentTarget = nil
 local aiming = false
 
@@ -59,8 +60,9 @@ end
 
 -- Kiểm tra hợp lệ
 local function isValidTarget(model)
-	if not model:IsA("Model") or excluded[model] then return false end
+	if not model:IsA("Model") then return false end
 	if model == LocalPlayer.Character then return false end
+	if excluded[model] or excludedNames[model.Name] then return false end
 	if not model:FindFirstChild("HumanoidRootPart") then return false end
 	return true
 end
@@ -76,12 +78,11 @@ local function getClosestToCenter()
 			if hrp then
 				local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
 				if onScreen then
-					-- Raycast để kiểm tra tầm nhìn
 					local origin = Camera.CFrame.Position
 					local direction = (hrp.Position - origin).Unit * (hrp.Position - origin).Magnitude
 					local rayParams = RaycastParams.new()
 					rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-					rayParams.FilterDescendantsInstances = {LocalPlayer.Character, model} -- không bị chặn bởi nhân vật mình và target
+					rayParams.FilterDescendantsInstances = {LocalPlayer.Character, model}
 					local result = workspace:Raycast(origin, direction, rayParams)
 
 					if not result or (result.Instance and model:IsAncestorOf(result.Instance)) then
@@ -106,13 +107,13 @@ RunService.RenderStepped:Connect(function()
 		if newTarget and newTarget ~= currentTarget then
 			if currentTarget then removeESP(currentTarget) end
 			currentTarget = newTarget
-			createESP(currentTarget, Color3.fromRGB(255, 0, 0)) -- Đỏ = bị aim
+			createESP(currentTarget, Color3.fromRGB(255, 0, 0))
 		end
 
 		if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
 			Camera.CFrame = CFrame.new(
-	        Camera.CFrame.Position,
-	        currentTarget.HumanoidRootPart.Position + Vector3.new(0, 1.75, 0))
+				Camera.CFrame.Position,
+				currentTarget.HumanoidRootPart.Position + Vector3.new(0, 1.75, 0))
 		end
 	elseif currentTarget then
 		removeESP(currentTarget)
@@ -120,7 +121,7 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- Bấm nút giữ để aimbot
+-- Xử lý các nút GUI
 aimButton.MouseButton1Down:Connect(function()
 	aiming = true
 end)
@@ -128,42 +129,53 @@ aimButton.MouseButton1Up:Connect(function()
 	aiming = false
 end)
 
--- Bấm nút loại bỏ khỏi aim
 excludeButton.MouseButton1Click:Connect(function()
 	if currentTarget then
 		excluded[currentTarget] = true
+		excludedNames[currentTarget.Name] = true
 		removeESP(currentTarget)
-		createESP(currentTarget, Color3.fromRGB(0, 255, 0)) -- Xanh lá = loại trừ
+		createESP(currentTarget, Color3.fromRGB(0, 255, 0))
 		currentTarget = nil
 	end
 end)
 
--- Bấm nút xóa toàn bộ loại trừ
 clearButton.MouseButton1Click:Connect(function()
 	for model, _ in pairs(excluded) do
 		removeESP(model)
 	end
 	excluded = {}
+	excludedNames = {}
 end)
 
--- Dành cho người dùng phím bấm (PC)
+-- Bắt phím (PC)
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
-	if input.KeyCode == AIMBOT_KEY then aiming = true end
+
+	if input.KeyCode == AIMBOT_KEY then
+		aiming = true
+	end
+
 	if input.KeyCode == EXCLUDE_KEY and currentTarget then
 		excluded[currentTarget] = true
+		excludedNames[currentTarget.Name] = true
 		removeESP(currentTarget)
 		createESP(currentTarget, Color3.fromRGB(0, 255, 0))
 		currentTarget = nil
 	end
+
 	if input.KeyCode == CLEAR_EXCLUDES_KEY then
-		for model, _ in pairs(excluded) do removeESP(model) end
+		for model, _ in pairs(excluded) do
+			removeESP(model)
+		end
 		excluded = {}
+		excludedNames = {}
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == AIMBOT_KEY then aiming = false end
+	if input.KeyCode == AIMBOT_KEY then
+		aiming = false
+	end
 end)
 
 print("aimbot = true")
