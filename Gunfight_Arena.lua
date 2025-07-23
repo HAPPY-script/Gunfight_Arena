@@ -107,12 +107,40 @@ RunService.RenderStepped:Connect(function()
 	-- Aimbot
 	if aiming then
 		local newTarget = getClosestToCenter()
-		if newTarget and newTarget ~= currentTarget then
-			if currentTarget then removeESP(currentTarget) end
-			currentTarget = newTarget
-			createESP(currentTarget, Color3.fromRGB(255, 0, 0)) -- đỏ
+
+		-- Kiểm tra nếu mục tiêu hiện tại bị chết hoặc bị khuất thì huỷ
+		if currentTarget then
+			local humanoid = currentTarget:FindFirstChildOfClass("Humanoid")
+			local hrp = currentTarget:FindFirstChild("HumanoidRootPart")
+
+			if humanoid and humanoid.Health <= 0 then
+				removeESP(currentTarget)
+				excluded[currentTarget] = true
+				currentTarget = nil
+			elseif hrp then
+				-- Raycast kiểm tra khuất tầm nhìn
+				local origin = Camera.CFrame.Position
+				local direction = (hrp.Position - origin).Unit * (hrp.Position - origin).Magnitude
+				local rayParams = RaycastParams.new()
+				rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+				rayParams.FilterDescendantsInstances = {LocalPlayer.Character, currentTarget}
+				local result = workspace:Raycast(origin, direction, rayParams)
+
+				-- Nếu bị vật cản che, ngừng nhắm
+				if result and not currentTarget:IsAncestorOf(result.Instance) then
+					removeESP(currentTarget)
+					currentTarget = nil
+				end
+			end
 		end
 
+		-- Nếu không có mục tiêu hoặc mục tiêu đổi, thì tìm mới
+		if not currentTarget and newTarget then
+			currentTarget = newTarget
+			createESP(currentTarget, Color3.fromRGB(255, 0, 0)) -- Đỏ
+		end
+
+		-- Nếu mục tiêu hợp lệ, nhắm vào nó
 		if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
 			Camera.CFrame = CFrame.new(
 				Camera.CFrame.Position,
@@ -123,10 +151,10 @@ RunService.RenderStepped:Connect(function()
 		currentTarget = nil
 	end
 
-	-- Tô ESP cho các model bị loại theo tên
+	-- Tô ESP xanh cho các model bị exclude theo tên
 	for _, model in ipairs(workspace:GetChildren()) do
 		if model:IsA("Model") and excludedNames[model.Name] and not excluded[model] then
-			createESP(model, Color3.fromRGB(0, 255, 0)) -- xanh lá
+			createESP(model, Color3.fromRGB(0, 255, 0))
 			excluded[model] = true
 		end
 	end
