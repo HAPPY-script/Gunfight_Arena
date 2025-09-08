@@ -9,6 +9,7 @@ local AIMBOT_KEY = Enum.KeyCode.E
 local EXCLUDE_KEY = Enum.KeyCode.Q
 local CLEAR_EXCLUDES_KEY = Enum.KeyCode.T
 local AUTO_SHOT_TOGGLE = Enum.KeyCode.Y
+local SWITCH_GUN_MODE = Enum.KeyCode.V
 
 local autoShotEnabled = false
 local shooting = false
@@ -17,13 +18,40 @@ local excludedNames = {}
 local currentTarget = nil
 local aiming = false
 
+-- Gun mode: "AutoGun" = giữ chuột, "Rifle" = click mỗi 0.5s
+local gunMode = "AutoGun"
+
 task.spawn(function()
 	while true do
 		if autoShotEnabled and aiming and currentTarget then
-			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+			if UserInputService.TouchEnabled then
+				-- Mobile: giữ nguyên click nhanh
+				VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+				VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+				task.wait(0.025)
+			else
+				if gunMode == "AutoGun" then
+					-- Giữ chuột
+					if not shooting then
+						shooting = true
+						VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+					end
+					task.wait(0.025)
+				elseif gunMode == "Rifle" then
+					-- Click mỗi 0.5 giây
+					VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+					VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+					task.wait(0.5)
+				end
+			end
+		else
+			if shooting then
+				-- Thả chuột khi không aim hoặc không có target
+				VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+				shooting = false
+			end
+			task.wait(0.05)
 		end
-		task.wait(0.025)
 	end
 end)
 
@@ -300,6 +328,21 @@ UserInputService.InputBegan:Connect(function(input, gp)
 			})
 		end)
 	end
+
+	if input.KeyCode == SWITCH_GUN_MODE then
+		if gunMode == "AutoGun" then
+			gunMode = "Rifle"
+		else
+			gunMode = "AutoGun"
+		end
+		pcall(function()
+			game.StarterGui:SetCore("SendNotification", {
+				Title = "Gun Mode",
+				Text = "Chế độ: " .. (gunMode == "AutoGun" and "Súng tự động" or "Súng trường"),
+				Duration = 2
+			})
+		end)
+	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
@@ -308,4 +351,4 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-print("aimbot = true (improved local script)")
+print("aimbot = true (improved local script with gun mode switch)")
