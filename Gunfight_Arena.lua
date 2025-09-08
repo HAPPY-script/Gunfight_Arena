@@ -1,7 +1,4 @@
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local autoShotEnabled = false
-local shooting = false
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,7 +8,10 @@ local Camera = workspace.CurrentCamera
 local AIMBOT_KEY = Enum.KeyCode.E
 local EXCLUDE_KEY = Enum.KeyCode.Q
 local CLEAR_EXCLUDES_KEY = Enum.KeyCode.T
+local AUTO_SHOT_TOGGLE = Enum.KeyCode.Y
 
+local autoShotEnabled = false
+local shooting = false
 local excluded = {}
 local excludedNames = {}
 local currentTarget = nil
@@ -23,15 +23,32 @@ task.spawn(function()
 			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
 			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
 		end
-		task.wait(0.025) -- điều chỉnh tốc độ bắn
+		task.wait(0.025)
 	end
 end)
 
--- Tạo GUI nếu chưa có
-local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-gui.Name = "AimbotGui"
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+local existing = playerGui:FindFirstChild("AimbotGui")
+if existing then
+	existing.ResetOnSpawn = false
+end
+
+local gui = existing or Instance.new("ScreenGui")
+if not existing then
+	gui.Name = "AimbotGui"
+	gui.Parent = playerGui
+end
+gui.ResetOnSpawn = false
 
 local function createButton(name, color, position)
+	local btn = gui:FindFirstChild(name)
+	if btn and btn:IsA("TextButton") then
+		btn.Position = position
+		btn.Size = UDim2.new(0, 60, 0, 60)
+		btn.BackgroundColor3 = color
+		return btn
+	end
+
 	local button = Instance.new("TextButton")
 	button.Name = name
 	button.Size = UDim2.new(0, 60, 0, 60)
@@ -48,13 +65,22 @@ local function createButton(name, color, position)
 	return button
 end
 
--- Tạo nút
 local aimButton = createButton("AimButton", Color3.fromRGB(255, 0, 0), UDim2.new(0.8, 0, 0.7, -80))
 local excludeButton = createButton("ExcludeButton", Color3.fromRGB(0, 255, 0), UDim2.new(0.8, 0, 0.5, -80))
 local clearButton = createButton("ClearButton", Color3.fromRGB(255, 255, 0), UDim2.new(0.8, 0, 0.3, -80))
 
--- ESP
+local function updateMobileVisibility()
+	local isMobile = UserInputService.TouchEnabled
+	gui.Enabled = isMobile
+	aimButton.Visible = isMobile
+	excludeButton.Visible = isMobile
+	clearButton.Visible = isMobile
+end
+updateMobileVisibility()
+UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(updateMobileVisibility)
+
 local function createESP(target, color)
+	if not target or not target:IsA("Model") then return end
 	if not target:FindFirstChild("ESP_Highlight") then
 		local highlight = Instance.new("Highlight")
 		highlight.Name = "ESP_Highlight"
@@ -74,38 +100,44 @@ local function removeESP(target)
 	end
 end
 
--- Kiểm tra hợp lệ
 local function isValidTarget(model)
-	if not model:IsA("Model") then return false end
+	if not model or not model:IsA("Model") then return false end
 	if model == LocalPlayer.Character then return false end
 	if excluded[model] or excludedNames[model.Name] then return false end
 	if not model:FindFirstChild("HumanoidRootPart") then return false end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return false end
 	return true
 end
 
--- Tìm mục tiêu gần tâm màn hình và không bị vật che khuất
 local function getClosestToCenter()
 	local closest = nil
 	local minDist = math.huge
+	local camPos = Camera.CFrame.Position
+	local viewportCenter = Camera.ViewportSize / 2
 
-	for _, model in ipairs(workspace:GetChildren()) do
+	local children = workspace:GetChildren()
+	for i = 1, #children do
+		local model = children[i]
 		if isValidTarget(model) then
 			local hrp = model:FindFirstChild("HumanoidRootPart")
 			if hrp then
 				local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
 				if onScreen then
-					local origin = Camera.CFrame.Position
-					local direction = (hrp.Position - origin).Unit * (hrp.Position - origin).Magnitude
-					local rayParams = RaycastParams.new()
-					rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-					rayParams.FilterDescendantsInstances = {LocalPlayer.Character, model}
-					local result = workspace:Raycast(origin, direction, rayParams)
+					local origin = camPos
+					local direction = (hrp.Position - origin)
+					if direction.Magnitude ~= 0 then
+						local rayParams = RaycastParams.new()
+						rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+						rayParams.FilterDescendantsInstances = {LocalPlayer.Character, model}
+						local result = workspace:Raycast(origin, direction, rayParams)
 
-					if not result or (result.Instance and model:IsAncestorOf(result.Instance)) then
-						local dist = (Vector2.new(screenPos.X, screenPos.Y) - Camera.ViewportSize / 2).Magnitude
-						if dist < minDist then
-							minDist = dist
-							closest = model
+						if not result or (result.Instance and model:IsAncestorOf(result.Instance)) then
+							local dist = (Vector2.new(screenPos.X, screenPos.Y) - viewportCenter).Magnitude
+							if dist < minDist then
+								minDist = dist
+								closest = model
+							end
 						end
 					end
 				end
@@ -116,7 +148,6 @@ local function getClosestToCenter()
 	return closest
 end
 
--- Render mỗi frame
 RunService.RenderStepped:Connect(function()
 	if aiming then
 		local newTarget = getClosestToCenter()
@@ -124,19 +155,17 @@ RunService.RenderStepped:Connect(function()
 		if currentTarget then
 			local humanoid = currentTarget:FindFirstChildOfClass("Humanoid")
 			local hrp = currentTarget:FindFirstChild("HumanoidRootPart")
-
-			if humanoid and humanoid.Health <= 0 then
+			if not humanoid or humanoid.Health <= 0 then
 				removeESP(currentTarget)
 				excluded[currentTarget] = true
 				currentTarget = nil
 			elseif hrp then
 				local origin = Camera.CFrame.Position
-				local direction = (hrp.Position - origin).Unit * (hrp.Position - origin).Magnitude
+				local direction = (hrp.Position - origin)
 				local rayParams = RaycastParams.new()
 				rayParams.FilterType = Enum.RaycastFilterType.Blacklist
 				rayParams.FilterDescendantsInstances = {LocalPlayer.Character, currentTarget}
 				local result = workspace:Raycast(origin, direction, rayParams)
-
 				if result and not currentTarget:IsAncestorOf(result.Instance) then
 					removeESP(currentTarget)
 					currentTarget = nil
@@ -150,9 +179,12 @@ RunService.RenderStepped:Connect(function()
 		end
 
 		if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
-			Camera.CFrame = CFrame.new(
-				Camera.CFrame.Position,
-				currentTarget.HumanoidRootPart.Position + Vector3.new(0, 1.5, 0))
+			pcall(function()
+				Camera.CFrame = CFrame.new(
+					Camera.CFrame.Position,
+					currentTarget.HumanoidRootPart.Position + Vector3.new(0, 1.5, 0)
+				)
+			end)
 		end
 	else
 		if currentTarget then
@@ -161,19 +193,38 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	for _, model in ipairs(workspace:GetChildren()) do
-		if model:IsA("Model") and excludedNames[model.Name] and not excluded[model] then
+	local children = workspace:GetChildren()
+	for i = 1, #children do
+		local model = children[i]
+		if model and model:IsA("Model") and excludedNames[model.Name] and not excluded[model] then
 			createESP(model, Color3.fromRGB(0, 255, 0))
 			excluded[model] = true
 		end
 	end
 end)
 
--- Nút GUI
-aimButton.MouseButton1Down:Connect(function()
+local function bindHoldBehavior(button, onDown, onUp)
+	button.MouseButton1Down:Connect(function()
+		onDown()
+	end)
+	button.MouseButton1Up:Connect(function()
+		onUp()
+	end)
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch then
+			onDown()
+		end
+	end)
+	button.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch then
+			onUp()
+		end
+	end)
+end
+
+bindHoldBehavior(aimButton, function()
 	aiming = true
-end)
-aimButton.MouseButton1Up:Connect(function()
+end, function()
 	aiming = false
 end)
 
@@ -186,6 +237,17 @@ excludeButton.MouseButton1Click:Connect(function()
 		currentTarget = nil
 	end
 end)
+excludeButton.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch then
+		if currentTarget then
+			excluded[currentTarget] = true
+			excludedNames[currentTarget.Name] = true
+			removeESP(currentTarget)
+			createESP(currentTarget, Color3.fromRGB(0, 255, 0))
+			currentTarget = nil
+		end
+	end
+end)
 
 clearButton.MouseButton1Click:Connect(function()
 	for model, _ in pairs(excluded) do
@@ -194,8 +256,16 @@ clearButton.MouseButton1Click:Connect(function()
 	excluded = {}
 	excludedNames = {}
 end)
+clearButton.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch then
+		for model, _ in pairs(excluded) do
+			removeESP(model)
+		end
+		excluded = {}
+		excludedNames = {}
+	end
+end)
 
--- Bắt phím
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
 
@@ -219,16 +289,17 @@ UserInputService.InputBegan:Connect(function(input, gp)
 		excludedNames = {}
 	end
 
-    	if input.KeyCode == Enum.KeyCode.Y then
-    	autoShotEnabled = not autoShotEnabled
-	    shooting = false
-    
-    	game.StarterGui:SetCore("SendNotification", {
-	    	Title = "Auto Shot",
-	    	Text = autoShotEnabled and "Đã BẬT tự động bắn" or "Đã TẮT tự động bắn",
-    		Duration = 2
-    	})
-    end
+	if input.KeyCode == AUTO_SHOT_TOGGLE then
+		autoShotEnabled = not autoShotEnabled
+		shooting = false
+		pcall(function()
+			game.StarterGui:SetCore("SendNotification", {
+				Title = "Auto Shot",
+				Text = autoShotEnabled and "Đã BẬT tự động bắn" or "Đã TẮT tự động bắn",
+				Duration = 2
+			})
+		end)
+	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
@@ -237,4 +308,4 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-print("aimbot = true")
+print("aimbot = true (improved local script)")
