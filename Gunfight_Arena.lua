@@ -102,17 +102,18 @@ UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(updateMobileVi
 
 local function createESP(target, color)
 	if not target or not target:IsA("Model") then return end
-	if not target:FindFirstChild("ESP_Highlight") then
-		local highlight = Instance.new("Highlight")
+	local highlight = target:FindFirstChild("ESP_Highlight")
+	if not highlight then
+		highlight = Instance.new("Highlight")
 		highlight.Name = "ESP_Highlight"
 		highlight.Adornee = target
 		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 		highlight.FillTransparency = 0.8
 		highlight.OutlineTransparency = 0
-		highlight.FillColor = color
-		highlight.OutlineColor = color
 		highlight.Parent = target
 	end
+	highlight.FillColor = color
+	highlight.OutlineColor = color
 end
 
 local function removeESP(target)
