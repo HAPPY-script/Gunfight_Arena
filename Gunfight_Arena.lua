@@ -348,7 +348,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
 		defaultESPEnabled = not defaultESPEnabled
 		pcall(function()
 			game.StarterGui:SetCore("SendNotification", {
-				Title = "ESP Xám",
+				Title = "ESP",
 				Text = defaultESPEnabled and "Đã BẬT ESP xám" or "Đã TẮT ESP xám",
 				Duration = 2
 			})
