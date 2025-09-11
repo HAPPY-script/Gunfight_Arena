@@ -9,6 +9,7 @@ local AIMBOT_KEY = Enum.KeyCode.E
 local EXCLUDE_KEY = Enum.KeyCode.Q
 local CLEAR_EXCLUDES_KEY = Enum.KeyCode.T
 local AUTO_SHOT_TOGGLE = Enum.KeyCode.Y
+local DEFAULT_ESP_KEY = Enum.KeyCode.V
 
 local autoShotEnabled = false
 local shooting = false
@@ -16,6 +17,8 @@ local excluded = {}
 local excludedNames = {}
 local currentTarget = nil
 local aiming = false
+local defaultESPEnabled = true
+local defaultESPColor = Color3.fromRGB(200, 200, 200)
 
 -- chỉ còn 1 chế độ duy nhất: AutoGun
 task.spawn(function()
@@ -167,6 +170,28 @@ local function getClosestToCenter()
 end
 
 RunService.RenderStepped:Connect(function()
+		
+		if defaultESPEnabled then
+			for _, model in pairs(workspace:GetChildren()) do
+				if model:IsA("Model") and model ~= LocalPlayer.Character then
+					-- Nếu chưa có highlight nào thì tạo ESP xám
+					if not model:FindFirstChild("ESP_Highlight") then
+						createESP(model, defaultESPColor)
+					end
+				end
+			end
+		else
+			
+			for _, model in pairs(workspace:GetChildren()) do
+				if model:IsA("Model") then
+					local h = model:FindFirstChild("ESP_Highlight")
+					if h and h.FillColor == defaultESPColor then
+						h:Destroy()
+					end
+				end
+			end
+		end
+
 	if aiming then
 		local newTarget = getClosestToCenter()
 
@@ -314,6 +339,17 @@ UserInputService.InputBegan:Connect(function(input, gp)
 			game.StarterGui:SetCore("SendNotification", {
 				Title = "Auto Shot",
 				Text = autoShotEnabled and "Đã BẬT tự động bắn" or "Đã TẮT tự động bắn",
+				Duration = 2
+			})
+		end)
+	end
+
+    if input.KeyCode == DEFAULT_ESP_KEY then
+		defaultESPEnabled = not defaultESPEnabled
+		pcall(function()
+			game.StarterGui:SetCore("SendNotification", {
+				Title = "ESP Xám",
+				Text = defaultESPEnabled and "Đã BẬT ESP xám" or "Đã TẮT ESP xám",
 				Duration = 2
 			})
 		end)
