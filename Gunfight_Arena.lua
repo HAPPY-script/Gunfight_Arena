@@ -171,26 +171,27 @@ end
 
 RunService.RenderStepped:Connect(function()
 		
-		if defaultESPEnabled then
-			for _, model in pairs(workspace:GetChildren()) do
-				if model:IsA("Model") and model ~= LocalPlayer.Character then
-					-- Nếu chưa có highlight nào thì tạo ESP xám
+	if defaultESPEnabled then
+		for _, model in pairs(workspace:GetChildren()) do
+			if model:IsA("Model") and model ~= LocalPlayer.Character then
+				-- Bỏ qua nếu model đã bị exclude (có tên trong excludedNames)
+				if not excludedNames[model.Name] then
 					if not model:FindFirstChild("ESP_Highlight") then
 						createESP(model, defaultESPColor)
 					end
 				end
 			end
-		else
-			
-			for _, model in pairs(workspace:GetChildren()) do
-				if model:IsA("Model") then
-					local h = model:FindFirstChild("ESP_Highlight")
-					if h and h.FillColor == defaultESPColor then
-						h:Destroy()
-					end
+		end
+	else
+		for _, model in pairs(workspace:GetChildren()) do
+			if model:IsA("Model") then
+				local h = model:FindFirstChild("ESP_Highlight")
+				if h and h.FillColor == defaultESPColor then
+					h:Destroy()
 				end
 			end
 		end
+	end
 
 	if aiming then
 		local newTarget = getClosestToCenter()
