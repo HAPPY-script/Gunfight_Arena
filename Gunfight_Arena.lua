@@ -9,7 +9,7 @@ local AIMBOT_KEY = Enum.KeyCode.E
 local EXCLUDE_KEY = Enum.KeyCode.Q
 local CLEAR_EXCLUDES_KEY = Enum.KeyCode.T
 local AUTO_SHOT_TOGGLE = Enum.KeyCode.Y
-local DEFAULT_ESP_KEY = Enum.KeyCode.V
+local DEFAULT_ESP_KEY = Enum.KeyCode.B
 
 local autoShotEnabled = false
 local shooting = false
