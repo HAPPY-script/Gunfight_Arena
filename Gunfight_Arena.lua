@@ -1,3 +1,9 @@
+if _G.Gunfight_Arena then
+    warn("Script đã chạy! Không thể chạy lại.")
+    return
+end
+_G.Gunfight_Arena = true
+
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
