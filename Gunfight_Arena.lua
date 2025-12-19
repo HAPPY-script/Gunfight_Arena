@@ -1,3 +1,6 @@
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/HAPPY-script/Gunfight_Arena/refs/heads/main/Guide.lua"))()
+
 if _G.Gunfight_Arena then
     warn("Script đã chạy! Không thể chạy lại.")
     return
