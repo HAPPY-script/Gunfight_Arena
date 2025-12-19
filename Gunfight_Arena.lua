@@ -349,8 +349,8 @@ UserInputService.InputBegan:Connect(function(input, gp)
 		pcall(function()
 			game.StarterGui:SetCore("SendNotification", {
 				Title = "Auto Shot",
-				Text = autoShotEnabled and "Đã BẬT tự động bắn" or "Đã TẮT tự động bắn",
-				Duration = 2
+				Text = autoShotEnabled and "[ON]🟢" or "[OFF]🔴",
+				Duration = 3
 			})
 		end)
 	end
@@ -360,8 +360,8 @@ UserInputService.InputBegan:Connect(function(input, gp)
 		pcall(function()
 			game.StarterGui:SetCore("SendNotification", {
 				Title = "ESP",
-				Text = defaultESPEnabled and "Đã BẬT ESP xám" or "Đã TẮT ESP xám",
-				Duration = 2
+				Text = defaultESPEnabled and "[ON]🟢" or "[OFF]🔴",
+				Duration = 3
 			})
 		end)
 	end
